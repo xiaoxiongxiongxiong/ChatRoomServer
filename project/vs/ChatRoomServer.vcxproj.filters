@@ -15,12 +15,21 @@
     <ClCompile Include="..\..\src\impl\ChatRoomServerImpl.cpp">
       <Filter>src\impl</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\impl\ChatRoomServerManager.cpp">
+      <Filter>src\impl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\cmdline.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\impl\ChatRoomServerImpl.h">
+      <Filter>src\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\impl\ChatRoomServerManager.h">
+      <Filter>src\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\impl\MessageQueue.h">
       <Filter>src\impl</Filter>
     </ClInclude>
   </ItemGroup>

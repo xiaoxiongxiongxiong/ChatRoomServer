@@ -3,9 +3,10 @@
 #include <limits.h>
 #include <mutex>
 #include <condition_variable>
+#include "impl/ChatRoomServerImpl.h"
 
 // 解析命令行
-static bool parse_cmdline(int argc, const char * const argv[], std::string & ip, uint16_t & port);
+static bool parse_cmdline(int argc, const char * const argv[], std::string & ip, int & port);
 
 // 主线程锁
 static std::mutex g_main_mtx;
@@ -16,7 +17,7 @@ static bool g_is_running = true;
 
 int main(int argc, char * argv[])
 {
-    uint16_t port = 0;
+    int port = 0;
     std::string ip;
     if (!parse_cmdline(argc, argv, ip, port))
         return EXIT_FAILURE;
@@ -24,9 +25,24 @@ int main(int argc, char * argv[])
     log_msg_init("ChatRoomServer.log", LOG_LEVEL_INFO);
     atexit(log_msg_uninit);
 
-    log_msg_info("server ip:%s, port:%d", ip.c_str(), port);
-    // TODO 启动TCP服务器
+    log_msg_info("server ip:%s, port:%d ...", ip.c_str(), port);
 
+    CTcpServerImpl * server_impl = new (std::nothrow)CTcpServerImpl();
+    if (nullptr == server_impl)
+    {
+        int code = errno;
+        log_msg_error("new CTcpServerImpl failed, err code:%d msg:%s", code, strerror(code));
+        return EXIT_FAILURE;
+    }
+    if (!server_impl->create(ip.c_str(), port))
+    {
+        log_msg_warn("create tcp server failed ...");
+        delete server_impl;
+        server_impl = nullptr;
+        return EXIT_FAILURE;
+    }
+
+    log_msg_info("start tcp server ...");
     while (g_is_running)
     {
         std::unique_lock<std::mutex> lck(g_main_mtx);
@@ -34,10 +50,16 @@ int main(int argc, char * argv[])
         // TODO
     }
 
+    server_impl->destroy();
+    delete server_impl;
+    server_impl = nullptr;
+
+    log_msg_info("stop tcp server ...");
+
     return EXIT_SUCCESS;
 }
 
-bool parse_cmdline(int argc, const char * const argv[], std::string & ip, uint16_t & port)
+bool parse_cmdline(int argc, const char * const argv[], std::string & ip, int & port)
 {
     if (argc < 1 || nullptr == argv || nullptr == argv[0])
     {
@@ -47,8 +69,8 @@ bool parse_cmdline(int argc, const char * const argv[], std::string & ip, uint16
 
     // 初始化cmdline
     cmdline::parser p;
-    p.add<std::string>("host", '\0', "ChatRoom Server ip address", false, "");
-    p.add<uint16_t>("port", '\0', "ChatRoom Server port", false, 0);
+    p.add<std::string>("host", '\0', "ChatRoom Server ip address", false, "0.0.0.0");
+    p.add<int>("port", '\0', "ChatRoom Server port", false, 0);
     p.add("version", 'v', "app version");
     p.add("help", 'h', "app help");
 
@@ -73,7 +95,7 @@ bool parse_cmdline(int argc, const char * const argv[], std::string & ip, uint16
     if (p.exist("host") && p.exist("port"))
     {
         ip = p.get<std::string>("host");
-        port = p.get<uint16_t>("port");
+        port = p.get<int>("port");
     }
     else
     {
